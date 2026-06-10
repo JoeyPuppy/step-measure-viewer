@@ -16,25 +16,20 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: microsoft/setup-msbuild@v2
-
       - name: Install Qt 5.15
         uses: jurplel/install-qt-action@v4
         with:
           version: '5.15.2'
           arch: win64_msvc2019_64
           cache: true
-
       - name: Setup vcpkg and install OCCT
         shell: pwsh
         run: |
           git clone --depth 1 https://github.com/microsoft/vcpkg.git $env:RUNNER_TEMP/vcpkg
           & $env:RUNNER_TEMP/vcpkg/bootstrap-vcpkg.bat
-          & $env:RUNNER_TEMP/vcpkg/vcpkg install opencascade:x64-windows `
-            --x-manifest-root="$env:GITHUB_WORKSPACE/step_measure_viewer"
+          & $env:RUNNER_TEMP/vcpkg/vcpkg install opencascade:x64-windows
           "VCPKG_ROOT=$env:RUNNER_TEMP/vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
-
       - name: Configure and build
         working-directory: step_measure_viewer
         shell: pwsh
@@ -43,7 +38,6 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
             -DCMAKE_PREFIX_PATH="$env:QT_ROOT_DIR"
           cmake --build build --config Release
-
       - name: Package Windows release
         shell: pwsh
         run: |
@@ -53,7 +47,6 @@ jobs:
           Copy-Item "$bin/step_measure_viewer.exe" $out/
           Copy-Item "$bin/*.dll" $out/ -ErrorAction SilentlyContinue
           Compress-Archive -Path $out -DestinationPath artifact/step_measure_viewer-win64.zip -Force
-
       - uses: actions/upload-artifact@v4
         with:
           name: step_measure_viewer-windows
@@ -66,31 +59,18 @@ jobs:
         working-directory: step_measure_viewer
     steps:
       - uses: actions/checkout@v4
-
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y \
-            build-essential cmake \
-            qtbase5-dev \
-            libocct-data-exchange-dev \
-            libocct-foundation-dev \
-            libocct-modeling-algorithms-dev \
-            libocct-modeling-data-dev \
-            libocct-visualization-dev \
-            libocct-ocaf-dev \
-            libgl1-mesa-dev
-
+          sudo apt-get install -y build-essential cmake qtbase5-dev libocct-data-exchange-dev libocct-foundation-dev libocct-modeling-algorithms-dev libocct-modeling-data-dev libocct-visualization-dev libocct-ocaf-dev libgl1-mesa-dev libx11-dev
       - name: Build
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=Release
           cmake --build build -j$(nproc)
-
       - name: Package Linux release
         run: |
           mkdir -p ../artifact
           tar -czf ../artifact/step_measure_viewer-linux64.tar.gz -C build/bin step_measure_viewer
-
       - uses: actions/upload-artifact@v4
         with:
           name: step_measure_viewer-linux
